@@ -68,10 +68,12 @@ const CATEGORIES = [
   { id: 'install',    label: 'Installation',  icon: 'wrench' },
   { id: 'maintain',   label: 'Maintenance',   icon: 'gear' },
   { id: 'receipt',    label: 'Purchase receipt', icon: 'receipt' },
-  { id: 'invoice',    label: 'Invoice',       icon: 'doc' },
   { id: 'before',     label: 'Site survey',   icon: 'eye', hint: 'Before' },
   { id: 'after',      label: 'Completion',    icon: 'check', hint: 'After' },
 ];
+
+// Categories that don't need a project name
+const NO_PROJECT_CATEGORIES = ['receipt'];
 
 // ─────────────────────────────────────────────────────────────
 // Inline icons — drawn with primitives only (lines, circles, rects)
@@ -115,6 +117,7 @@ function FomoUploadApp({ themeKey = 'terracotta' }) {
   const [submitting, setSubmitting] = useState(false);
   const [status, setStatus] = useState('idle'); // idle | submitting | done
   const [progress, setProgress] = useState({ current: 0, total: 0 });
+  const [errorMsg, setErrorMsg] = useState('');
   const [now, setNow] = useState(new Date());
   const fileRef = useRef(null);
   const cameraRef = useRef(null);
@@ -124,10 +127,16 @@ function FomoUploadApp({ themeKey = 'terracotta' }) {
     return () => clearInterval(t);
   }, []);
 
-  // prefill some recent projects for the chip suggestions
-  const recentProjects = ['Changi T4 Air-con', 'Tampines Mall HVAC', 'Bukit Batok Schoolhouse'];
+  // prefill some recent projects for the chip suggestions — loaded from localStorage
+  const [recentProjects, setRecentProjects] = useState(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem('fomo_recent_projects') || '[]');
+      return Array.isArray(stored) ? stored : [];
+    } catch { return []; }
+  });
 
-  const canSubmit = project.trim() && category && photos.length > 0 && !submitting;
+  const skipProject = NO_PROJECT_CATEGORIES.includes(category);
+  const canSubmit = (skipProject || project.trim()) && category && photos.length > 0 && !submitting;
 
   function addFiles(fileList) {
     const files = Array.from(fileList || []);
@@ -146,6 +155,7 @@ function FomoUploadApp({ themeKey = 'terracotta' }) {
 
   async function submit() {
     if (!canSubmit) return;
+    setErrorMsg('');
     setSubmitting(true);
     setStatus('submitting');
     setProgress({ current: 0, total: photos.length });
@@ -189,7 +199,7 @@ function FomoUploadApp({ themeKey = 'terracotta' }) {
         });
 
         const payload = {
-          project: project.trim(),
+          project: skipProject ? '' : project.trim(),
           category: CATEGORIES.find(c => c.id === category)?.label,
           timestamp: new Date().toISOString(),
           note: i === 0 ? note : '',
@@ -202,12 +212,23 @@ function FomoUploadApp({ themeKey = 'terracotta' }) {
           body: JSON.stringify(payload),
         });
 
-        if (!res.ok) throw new Error(`Photo ${i + 1} failed`);
+        if (!res.ok) {
+          const txt = await res.text().catch(() => '');
+          throw new Error(`Photo ${i + 1}: HTTP ${res.status} ${txt.slice(0, 200)}`);
+        }
         setProgress({ current: i + 1, total: photos.length });
+      }
+      // Save project to recents on success
+      if (!skipProject && project.trim()) {
+        const name = project.trim();
+        const updated = [name, ...recentProjects.filter(r => r !== name)].slice(0, 5);
+        setRecentProjects(updated);
+        try { localStorage.setItem('fomo_recent_projects', JSON.stringify(updated)); } catch {}
       }
       setStatus('done');
     } catch (e) {
-      alert('Upload failed: ' + e.message + '. Please try again.');
+      console.error('Upload error:', e);
+      setErrorMsg(String(e && e.message ? e.message : e));
       setStatus('idle');
     } finally {
       setSubmitting(false);
@@ -240,7 +261,7 @@ function FomoUploadApp({ themeKey = 'terracotta' }) {
     }}>
     <div style={{ flex: 1, overflow: 'auto', paddingBottom: 24 }} className="phone-scroll">
       {/* Header */}
-      <div style={{ padding: '72px 22px 10px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+      <div style={{ padding: '32px 22px 10px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
         <div>
           <div style={{
             fontFamily: '"Fraunces", Georgia, serif',
@@ -265,6 +286,26 @@ function FomoUploadApp({ themeKey = 'terracotta' }) {
         }}>F</div>
       </div>
 
+      {/* Error banner */}
+      {errorMsg && (
+        <div style={{ padding: '14px 18px 0' }}>
+          <div style={{
+            background: '#fee', border: '1px solid #fbb', color: '#900',
+            borderRadius: 14, padding: '12px 14px', fontSize: 13, lineHeight: 1.4,
+            display: 'flex', gap: 10, alignItems: 'flex-start',
+          }}>
+            <div style={{ flex: 1, wordBreak: 'break-word' }}>
+              <b>Upload failed</b><br />{errorMsg}
+            </div>
+            <button onClick={() => setErrorMsg('')} style={{
+              all: 'unset', cursor: 'pointer', color: '#900', padding: 2,
+            }}>
+              <Icon name="x" size={14} stroke={2.4} />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Intro card */}
       <div style={{ padding: '14px 18px 0' }}>
         <div style={{
@@ -285,18 +326,20 @@ function FomoUploadApp({ themeKey = 'terracotta' }) {
         </div>
       </div>
 
-      {/* 1. Project name */}
-      <Section theme={theme} step={1} title="Which project?">
-        <ProjectInput
-          theme={theme}
-          value={project}
-          onChange={setProject}
-          recent={recentProjects}
-        />
-      </Section>
+      {/* 1. Project name (hidden for purchase receipts) */}
+      {!skipProject && (
+        <Section theme={theme} step={1} title="Which project?">
+          <ProjectInput
+            theme={theme}
+            value={project}
+            onChange={setProject}
+            recent={recentProjects}
+          />
+        </Section>
+      )}
 
       {/* 2. Category */}
-      <Section theme={theme} step={2} title="What kind of upload?">
+      <Section theme={theme} step={1} title="What kind of upload?">
         <div style={{
           display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, padding: '0 18px',
         }}>
@@ -344,7 +387,7 @@ function FomoUploadApp({ themeKey = 'terracotta' }) {
       </Section>
 
       {/* 3. Photos */}
-      <Section theme={theme} step={3} title="Photos" subtitle={photos.length > 0 ? `${photos.length} selected` : 'Add as many as you need'}>
+      <Section theme={theme} step={skipProject ? 2 : 3} title="Photos" subtitle={photos.length > 0 ? `${photos.length} selected` : 'Add as many as you need'}>
         <div style={{ padding: '0 18px' }}>
           {photos.length === 0 ? (
             <EmptyPhotoPicker theme={theme} onPick={() => fileRef.current?.click()} onCamera={() => cameraRef.current?.click()} />
@@ -365,7 +408,7 @@ function FomoUploadApp({ themeKey = 'terracotta' }) {
       </Section>
 
       {/* 4. Note (optional) */}
-      <Section theme={theme} step={4} title="Note" subtitle="Optional">
+      <Section theme={theme} step={skipProject ? 3 : 4} title="Note" subtitle="Optional">
         <div style={{ padding: '0 18px' }}>
           <textarea
             placeholder="e.g. Replaced the condenser coil, tested at 18°C."
@@ -486,17 +529,19 @@ function ProjectInput({ theme, value, onChange, recent }) {
           </button>
         )}
       </div>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
-        <span style={{ fontSize: 12, color: theme.inkFaint, alignSelf: 'center', marginRight: 2 }}>Recent</span>
-        {recent.map((r) => (
-          <button key={r} onClick={() => onChange(r)} style={{
-            all: 'unset', cursor: 'pointer',
-            fontSize: 12.5, padding: '6px 10px', borderRadius: 999,
-            border: `1px solid ${theme.border}`, color: theme.inkSoft,
-            background: theme.surface,
-          }}>{r}</button>
-        ))}
-      </div>
+      {recent.length > 0 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
+          <span style={{ fontSize: 12, color: theme.inkFaint, alignSelf: 'center', marginRight: 2 }}>Recent</span>
+          {recent.map((r) => (
+            <button key={r} onClick={() => onChange(r)} style={{
+              all: 'unset', cursor: 'pointer',
+              fontSize: 12.5, padding: '6px 10px', borderRadius: 999,
+              border: `1px solid ${theme.border}`, color: theme.inkSoft,
+              background: theme.surface,
+            }}>{r}</button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
