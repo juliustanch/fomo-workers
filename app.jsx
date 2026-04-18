@@ -114,6 +114,7 @@ function FomoUploadApp({ themeKey = 'terracotta' }) {
   const [note, setNote] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [status, setStatus] = useState('idle'); // idle | submitting | done
+  const [progress, setProgress] = useState({ current: 0, total: 0 });
   const [now, setNow] = useState(new Date());
   const fileRef = useRef(null);
   const cameraRef = useRef(null);
@@ -147,9 +148,71 @@ function FomoUploadApp({ themeKey = 'terracotta' }) {
     if (!canSubmit) return;
     setSubmitting(true);
     setStatus('submitting');
-    await new Promise((r) => setTimeout(r, 1600));
-    setStatus('done');
-    setSubmitting(false);
+    setProgress({ current: 0, total: photos.length });
+
+    const FLOW_URL = "https://default52f4c70d6ff341fd9304e65f606937.8f.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/8ef2b3f1b56344d2997f9da170afb050/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=QuBdzBKlAupD358CS7nyqwH-FUbemLuIIz_EzAN4QKg";
+
+    async function compress(blob) {
+      return new Promise((resolve) => {
+        try {
+          const img = new Image();
+          img.onload = () => {
+            try {
+              const MAX = 1600;
+              let { width, height } = img;
+              if (width > MAX || height > MAX) {
+                const ratio = Math.min(MAX / width, MAX / height);
+                width = Math.round(width * ratio);
+                height = Math.round(height * ratio);
+              }
+              const canvas = document.createElement('canvas');
+              canvas.width = width; canvas.height = height;
+              canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+              canvas.toBlob(b => resolve(b || blob), 'image/jpeg', 0.8);
+            } catch { resolve(blob); }
+          };
+          img.onerror = () => resolve(blob);
+          img.src = URL.createObjectURL(blob);
+        } catch { resolve(blob); }
+      });
+    }
+
+    try {
+      for (let i = 0; i < photos.length; i++) {
+        const p = photos[i];
+        const originalBlob = await fetch(p.url).then(r => r.blob());
+        const compressedBlob = await compress(originalBlob);
+        const b64 = await new Promise(res => {
+          const reader = new FileReader();
+          reader.onload = () => res(reader.result.split(',')[1]);
+          reader.readAsDataURL(compressedBlob);
+        });
+
+        const payload = {
+          project: project.trim(),
+          category: CATEGORIES.find(c => c.id === category)?.label,
+          timestamp: new Date().toISOString(),
+          note: i === 0 ? note : '',
+          photos: [{ name: p.name.replace(/\.[^.]+$/, '') + '.jpg', data: b64 }],
+        };
+
+        const res = await fetch(FLOW_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        if (!res.ok) throw new Error(`Photo ${i + 1} failed`);
+        setProgress({ current: i + 1, total: photos.length });
+      }
+      setStatus('done');
+    } catch (e) {
+      alert('Upload failed: ' + e.message + '. Please try again.');
+      setStatus('idle');
+    } finally {
+      setSubmitting(false);
+      setProgress({ current: 0, total: 0 });
+    }
   }
 
   function resetAll() {
