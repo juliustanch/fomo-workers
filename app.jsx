@@ -143,13 +143,47 @@ function FomoUploadApp({ themeKey = 'terracotta' }) {
     setPhotos((ps) => ps.filter((p) => p.id !== id));
   }
 
-  async function submit() {
+ async function submit() {
     if (!canSubmit) return;
     setSubmitting(true);
     setStatus('submitting');
-    await new Promise((r) => setTimeout(r, 1600));
-    setStatus('done');
-    setSubmitting(false);
+    
+    const FLOW_URL = "https://default52f4c70d6ff341fd9304e65f606937.8f.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/8ef2b3f1b56344d2997f9da170afb050/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=QuBdzBKlAupD358CS7nyqwH-FUbemLuIIz_EzAN4QKg";
+    
+    try {
+      // Convert each photo to base64
+      const photoData = await Promise.all(photos.map(async (p) => {
+        const blob = await fetch(p.url).then(r => r.blob());
+        const b64 = await new Promise(res => {
+          const reader = new FileReader();
+          reader.onload = () => res(reader.result.split(',')[1]);
+          reader.readAsDataURL(blob);
+        });
+        return { name: p.name, data: b64 };
+      }));
+
+      const payload = {
+        project: project.trim(),
+        category: CATEGORIES.find(c => c.id === category)?.label,
+        timestamp: new Date().toISOString(),
+        note,
+        photos: photoData,
+      };
+
+      const res = await fetch(FLOW_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      
+      if (!res.ok) throw new Error('Upload failed');
+      setStatus('done');
+    } catch (e) {
+      alert('Upload failed. Please check your connection and try again.');
+      setStatus('idle');
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   function resetAll() {
