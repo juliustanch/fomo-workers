@@ -78,11 +78,11 @@ const THEMES = {
 // Categories
 // ─────────────────────────────────────────────────────────────
 const CATEGORIES = [
-  { id: 'before',     label: 'Site survey',   icon: 'eye', hint: 'Before' },
   { id: 'install',    label: 'Installation',  icon: 'wrench' },
-  { id: 'after',      label: 'Completion',    icon: 'check', hint: 'After' },
   { id: 'maintain',   label: 'Maintenance',   icon: 'gear' },
   { id: 'receipt',    label: 'Purchase receipt', icon: 'receipt' },
+  { id: 'before',     label: 'Site survey',   icon: 'eye', hint: 'Before' },
+  { id: 'after',      label: 'Completion',    icon: 'check', hint: 'After' },
 ];
 
 // Categories that don't need a project name
@@ -131,10 +131,7 @@ function FomoUploadApp({ themeKey = 'terracotta' }) {
   const [photos, setPhotos] = useState([]); // [{id, url, name}]
   const [note, setNote] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [status, setStatus] = useState(() => {
-    if (typeof window !== 'undefined' && window.location && window.location.hash === '#preview-success') return 'done';
-    return 'idle';
-  });
+  const [status, setStatus] = useState('idle'); // idle | submitting | done
   const [progress, setProgress] = useState({ current: 0, total: 0 });
   const [errorMsg, setErrorMsg] = useState('');
   const [now, setNow] = useState(new Date());
@@ -328,7 +325,7 @@ function FomoUploadApp({ themeKey = 'terracotta' }) {
 
   // ───────────────────── Success overlay ─────────────────────
   if (status === 'done') {
-    return <SuccessScreen theme={theme} project={project} category={CATEGORIES.find(c => c.id === category)} count={photos.length} uploader={userName.trim()} onDone={resetAll} />;
+    return <SuccessScreen theme={theme} project={project} category={CATEGORIES.find(c => c.id === category)} count={photos.length} onDone={resetAll} />;
   }
 
   return (
@@ -343,10 +340,11 @@ function FomoUploadApp({ themeKey = 'terracotta' }) {
         <div>
           <img src="fomo-logo.png" alt="FOMO Energy" style={{ height: 22, display: 'block', marginBottom: 14 }} />
           <div style={{
-            fontFamily: '"Plus Jakarta Sans", -apple-system, system-ui, sans-serif',
-            fontWeight: 700, fontSize: 26, lineHeight: 1.15, letterSpacing: -0.5,
+            fontFamily: '"Fraunces", Georgia, serif',
+            fontWeight: 500, fontSize: 34, lineHeight: 1.02, letterSpacing: -0.6,
+            fontVariationSettings: '"SOFT" 100, "opsz" 144',
           }}>
-            Upload photos to Ops Team
+            Good <span style={{ fontStyle: 'italic' }}>{now.getHours() < 12 ? 'morning' : now.getHours() < 18 ? 'afternoon' : 'evening'}</span>
           </div>
           <div style={{ marginTop: 6, color: theme.inkSoft, fontSize: 15, display: 'flex', alignItems: 'center', gap: 6 }}>
             <Icon name="calendar" size={14} color={theme.inkFaint} stroke={2} />
@@ -376,7 +374,25 @@ function FomoUploadApp({ themeKey = 'terracotta' }) {
         </div>
       )}
 
-      {/* Intro card removed */}
+      {/* Intro card */}
+      <div style={{ padding: '14px 18px 0' }}>
+        <div style={{
+          background: theme.accentSoft, color: theme.ink,
+          borderRadius: 20, padding: '14px 16px',
+          display: 'flex', gap: 12, alignItems: 'center',
+        }}>
+          <div style={{
+            width: 40, height: 40, borderRadius: 12, background: theme.accent, color: theme.accentInk,
+            display: 'grid', placeItems: 'center', flexShrink: 0,
+          }}>
+            <Icon name="upload" size={20} color={theme.accentInk} stroke={2.2} />
+          </div>
+          <div style={{ fontSize: 14.5, lineHeight: 1.35 }}>
+            <div style={{ fontWeight: 600 }}>Send a site update</div>
+            <div style={{ color: theme.inkSoft, marginTop: 1 }}>Snap photos, tag the project, send.</div>
+          </div>
+        </div>
+      </div>
 
       {/* 0. Name */}
       <Section theme={theme} step={1} title="What's your name?">
@@ -716,13 +732,11 @@ function PhotoGrid({ theme, photos, onRemove, onAdd, onCamera }) {
 // ─────────────────────────────────────────────────────────────
 // Success screen
 // ─────────────────────────────────────────────────────────────
-function SuccessScreen({ theme, project, category, count, uploader, onDone }) {
-  const isPreview = typeof window !== 'undefined' && window.location && window.location.hash === '#preview-success';
+function SuccessScreen({ theme, project, category, count, onDone }) {
   useEffect(() => {
-    if (isPreview) return;
-    const t = setTimeout(onDone, 10000);
+    const t = setTimeout(onDone, 4200);
     return () => clearTimeout(t);
-  }, [onDone, isPreview]);
+  }, [onDone]);
 
   return (
     <div style={{
@@ -779,32 +793,32 @@ function SuccessScreen({ theme, project, category, count, uploader, onDone }) {
 
       <div style={{ textAlign: 'center', marginTop: 28 }}>
         <div style={{
-          fontFamily: '"Plus Jakarta Sans", -apple-system, system-ui, sans-serif',
-          fontWeight: 700,
-          fontSize: 32, letterSpacing: -0.6, lineHeight: 1.1,
+          fontFamily: '"Fraunces", Georgia, serif', fontWeight: 500,
+          fontSize: 34, letterSpacing: -0.6, lineHeight: 1.1,
         }}>
-          <span>Thanks{uploader ? `, ${uploader}` : (isPreview ? ', Ahmad' : '')}!</span>
+          <span style={{ fontStyle: 'italic' }}>Terima kasih!</span>
         </div>
         <div style={{ marginTop: 6, color: theme.inkSoft, fontSize: 15.5, lineHeight: 1.5, maxWidth: 300, margin: '6px auto 0' }}>
-          {(count || 3)} photo{(count || 3) === 1 ? '' : 's'} filed under <b style={{ color: theme.ink }}>{project || 'Project Frontier'}</b>
-          {category ? <> · <span>{category.label}</span></> : <> · <span>Installation</span></>}
+          {count} photo{count === 1 ? '' : 's'} filed under <b style={{ color: theme.ink }}>{project}</b>
+          {category ? <> · <span>{category.label}</span></> : null}
         </div>
-
-        <button onClick={onDone} style={{
-          all: 'unset', cursor: 'pointer',
-          marginTop: 32, display: 'inline-flex', alignItems: 'center', gap: 10,
-          padding: '14px 28px', borderRadius: 999,
-          background: theme.accent, color: theme.accentInk,
-          fontSize: 15.5, fontWeight: 600, letterSpacing: -0.2,
-          boxShadow: '0 8px 24px -8px ' + theme.accent,
-        }}>
-          <Icon name="plus" size={16} color={theme.accentInk} stroke={2.4} />
-          Upload another
-        </button>
       </div>
 
-      <div style={{ marginTop: 'auto', textAlign: 'center', fontSize: 12, color: theme.inkFaint }}>
-        Auto-returning in 10 seconds…
+      <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <button onClick={onDone} style={{
+          all: 'unset', cursor: 'pointer',
+          width: '100%', boxSizing: 'border-box',
+          height: 56, borderRadius: 18,
+          background: theme.ink, color: theme.bg,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+          fontWeight: 700, fontSize: 16,
+        }}>
+          Send another
+          <Icon name="plus" size={18} color={theme.bg} stroke={2.4} />
+        </button>
+        <div style={{ textAlign: 'center', fontSize: 12, color: theme.inkFaint }}>
+          Auto-returning in a few seconds…
+        </div>
       </div>
     </div>
   );
