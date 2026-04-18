@@ -27,7 +27,6 @@
   <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
   <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
 
-  <script type="text/babel" src="ios-frame.jsx"></script>
   <script type="text/babel" src="app.jsx"></script>
   <script type="text/babel" src="tweaks.jsx"></script>
 
@@ -38,66 +37,17 @@
 
     function Shell() {
       const [themeKey, setThemeKey] = React.useState(TWEAK_DEFAULTS.themeKey);
-      const [scale, setScale] = React.useState(1);
 
-      // Responsive scale so the phone fills the viewport on mobile
-      React.useEffect(() => {
-        function compute() {
-          const w = window.innerWidth;
-          const h = window.innerHeight;
-          const phoneW = 402, phoneH = 874;
-          // On small screens, fit phone snug to viewport
-          if (w < 720) {
-            const s = Math.min(w / phoneW, h / phoneH);
-            setScale(s);
-          } else {
-            setScale(1);
-          }
-        }
-        compute();
-        window.addEventListener('resize', compute);
-        return () => window.removeEventListener('resize', compute);
-      }, []);
-
-      const isMobile = typeof window !== 'undefined' && window.innerWidth < 720;
       const theme = THEMES[themeKey] || THEMES.terracotta;
 
       return (
         <div style={{
           minHeight: '100vh',
-          background: isMobile ? theme.bg : '#ebe5dc',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          padding: isMobile ? 0 : '40px 20px',
-          boxSizing: 'border-box',
+          background: theme.bg,
           position: 'relative',
         }}>
-          {!isMobile && (
-            <div style={{
-              position: 'absolute', top: 28, left: 32,
-              fontFamily: '"Fraunces", Georgia, serif',
-              fontSize: 22, fontWeight: 500, color: '#2a2420', letterSpacing: -0.4,
-              display: 'flex', alignItems: 'center', gap: 10,
-            }}>
-              <span style={{
-                width: 32, height: 32, borderRadius: 10, background: theme.accent, color: '#fff',
-                display: 'grid', placeItems: 'center', fontSize: 16, fontWeight: 700,
-              }}>F</span>
-              Fomo Workers
-              <span style={{ fontSize: 12, color: '#7a6e66', marginLeft: 8, fontFamily: '"Plus Jakarta Sans", sans-serif', fontWeight: 500 }}>
-                Mobile preview · add to home screen on site
-              </span>
-            </div>
-          )}
-
-          <div style={{
-            transform: `scale(${scale})`,
-            transformOrigin: 'center center',
-          }}>
-            <IOSDevice width={402} height={874} dark={false}>
-              <div className="phone-content" style={{ height: '100%', position: 'relative', overflow: 'hidden' }}>
-                <FomoUploadApp themeKey={themeKey} />
-              </div>
-            </IOSDevice>
+          <div style={{ height: '100vh', position: 'relative', overflow: 'hidden' }}>
+            <FomoUploadApp themeKey={themeKey} />
           </div>
 
           <TweaksPanel themeKey={themeKey} onChange={setThemeKey} />
