@@ -383,7 +383,7 @@ function FomoUploadApp({ themeKey = 'terracotta' }) {
         <input
           value={userName}
           onChange={(e) => setUserName(e.target.value)}
-          placeholder="e.g. Ahmad"
+          placeholder="e.g. Bellal"
           style={{
             width: '100%', boxSizing: 'border-box',
             background: theme.surface, color: theme.ink,
@@ -582,7 +582,7 @@ function ProjectInput({ theme, value, onChange, recent }) {
           onChange={(e) => onChange(e.target.value)}
           onFocus={() => setFocus(true)}
           onBlur={() => setFocus(false)}
-          placeholder="e.g. Changi T4 Air-con"
+          placeholder="e.g. 50 Jalan Jarak"
           style={{
             flex: 1, border: 'none', outline: 'none', background: 'transparent',
             padding: '16px 0', fontFamily: 'inherit', fontSize: 16, color: theme.ink,
