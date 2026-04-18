@@ -28,7 +28,7 @@
   <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
 
   <script type="text/babel" src="ios-frame.jsx"></script>
-  <script type="text/babel" src="app.jsx"></script>
+  <script type="text/babel" src="archive/app.jsx"></script>
   <script type="text/babel" src="tweaks.jsx"></script>
 
   <script type="text/babel">
@@ -38,29 +38,9 @@
 
     function Shell() {
       const [themeKey, setThemeKey] = React.useState(TWEAK_DEFAULTS.themeKey);
-      const [isMobile, setIsMobile] = React.useState(typeof window !== 'undefined' && window.innerWidth < 720);
-
-      React.useEffect(() => {
-        function check() { setIsMobile(window.innerWidth < 720); }
-        window.addEventListener('resize', check);
-        return () => window.removeEventListener('resize', check);
-      }, []);
 
       const theme = THEMES[themeKey] || THEMES.terracotta;
 
-      // On mobile: full-bleed, no frame.
-      if (isMobile) {
-        return (
-          <div style={{ minHeight: '100vh', background: theme.bg, position: 'relative' }}>
-            <div style={{ height: '100vh', position: 'relative', overflow: 'hidden' }}>
-              <FomoUploadApp themeKey={themeKey} />
-            </div>
-            <TweaksPanel themeKey={themeKey} onChange={setThemeKey} />
-          </div>
-        );
-      }
-
-      // On desktop: show inside iPhone frame for mockup preview.
       return (
         <div style={{
           minHeight: '100vh',
