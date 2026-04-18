@@ -27,12 +27,13 @@
   <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
   <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
 
+  <script type="text/babel" src="ios-frame.jsx"></script>
   <script type="text/babel" src="app.jsx"></script>
   <script type="text/babel" src="tweaks.jsx"></script>
 
   <script type="text/babel">
     const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
-      "themeKey": "terracotta"
+      "themeKey": "fomo"
     }/*EDITMODE-END*/;
 
     function Shell() {
@@ -43,12 +44,16 @@
       return (
         <div style={{
           minHeight: '100vh',
-          background: theme.bg,
+          background: '#ebe5dc',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: '30px 20px', boxSizing: 'border-box',
           position: 'relative',
         }}>
-          <div style={{ height: '100vh', position: 'relative', overflow: 'hidden' }}>
-            <FomoUploadApp themeKey={themeKey} />
-          </div>
+          <IOSDevice width={402} height={874} dark={true}>
+            <div className="phone-content" style={{ height: '100%', position: 'relative', overflow: 'hidden' }}>
+              <FomoUploadApp themeKey={themeKey} />
+            </div>
+          </IOSDevice>
 
           <TweaksPanel themeKey={themeKey} onChange={setThemeKey} />
         </div>

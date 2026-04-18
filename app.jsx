@@ -59,6 +59,19 @@ const THEMES = {
     success: 'oklch(0.68 0.11 150)',
     border: 'oklch(0.9 0.012 330)',
   },
+  fomo: {
+    label: 'FOMO Brand',
+    bg: '#0D1B35',          // Deep Navy
+    surface: '#1a2847',     // slightly lifted navy for cards
+    ink: '#FFFFFF',         // white text
+    inkSoft: '#c9d2e0',     // dimmed white for secondary
+    inkFaint: '#8899AA',    // Caption Grey
+    accent: '#FF7F41',      // FOMO Orange — used only for dividers/accents
+    accentInk: '#0D1B35',   // navy on orange for contrast
+    accentSoft: '#5B78A0',  // Slate Blue for soft surfaces
+    success: '#7fd4a4',     // soft green retained for success toast only
+    border: '#2a3a5c',      // subtle navy divider
+  },
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -261,8 +274,9 @@ function FomoUploadApp({ themeKey = 'terracotta' }) {
     }}>
     <div style={{ flex: 1, overflow: 'auto', paddingBottom: 24 }} className="phone-scroll">
       {/* Header */}
-      <div style={{ padding: '32px 22px 10px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+      <div style={{ padding: '72px 22px 10px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
         <div>
+          <img src="fomo-logo.png" alt="FOMO Energy" style={{ height: 22, display: 'block', marginBottom: 14 }} />
           <div style={{
             fontFamily: '"Fraunces", Georgia, serif',
             fontWeight: 500, fontSize: 34, lineHeight: 1.02, letterSpacing: -0.6,
@@ -275,15 +289,7 @@ function FomoUploadApp({ themeKey = 'terracotta' }) {
             {formattedDate} · {formattedTime}
           </div>
         </div>
-        {/* Fomo mark */}
-        <div style={{
-          width: 44, height: 44, borderRadius: 14,
-          background: theme.accent, color: theme.accentInk,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontFamily: '"Fraunces", Georgia, serif',
-          fontWeight: 600, fontSize: 20, letterSpacing: -0.5,
-          boxShadow: '0 4px 14px -4px ' + theme.accent,
-        }}>F</div>
+        {/* Fomo mark hidden when logo is shown in header */}
       </div>
 
       {/* Error banner */}
