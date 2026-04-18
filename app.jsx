@@ -298,10 +298,7 @@ function FomoUploadApp({ themeKey = 'terracotta' }) {
       }
       // Save project to recents on success
       if (!skipProject && project.trim()) {
-        const name = project.trim();
-        const updated = [name, ...recentProjects.filter(r => r !== name)].slice(0, 5);
-        setRecentProjects(updated);
-        try { localStorage.setItem('fomo_recent_projects', JSON.stringify(updated)); } catch {}
+        saveRecentProject(project.trim());
       }
       setStatus('done');
     } catch (e) {
@@ -312,6 +309,14 @@ function FomoUploadApp({ themeKey = 'terracotta' }) {
       setSubmitting(false);
       setProgress({ current: 0, total: 0 });
     }
+  }
+
+  function saveRecentProject(name) {
+    const trimmed = String(name || '').trim();
+    if (!trimmed) return;
+    const updated = [trimmed, ...recentProjects.filter(r => r.toLowerCase() !== trimmed.toLowerCase())].slice(0, 10);
+    setRecentProjects(updated);
+    try { localStorage.setItem('fomo_recent_projects', JSON.stringify(updated)); } catch {}
   }
 
   function resetAll() {
@@ -401,6 +406,7 @@ function FomoUploadApp({ themeKey = 'terracotta' }) {
             theme={theme}
             value={project}
             onChange={setProject}
+            onCommit={saveRecentProject}
             recent={recentProjects}
           />
         </Section>
@@ -564,7 +570,7 @@ function Section({ step, title, subtitle, children, theme }) {
 // ─────────────────────────────────────────────────────────────
 // Project input with recent-chip suggestions
 // ─────────────────────────────────────────────────────────────
-function ProjectInput({ theme, value, onChange, recent }) {
+function ProjectInput({ theme, value, onChange, onCommit, recent }) {
   const [focus, setFocus] = useState(false);
   return (
     <div style={{ padding: '0 18px' }}>
@@ -581,7 +587,7 @@ function ProjectInput({ theme, value, onChange, recent }) {
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onFocus={() => setFocus(true)}
-          onBlur={() => setFocus(false)}
+          onBlur={() => { setFocus(false); if (onCommit && value && value.trim().length >= 2) onCommit(value); }}
           placeholder="e.g. 50 Jalan Jarak"
           style={{
             flex: 1, border: 'none', outline: 'none', background: 'transparent',
