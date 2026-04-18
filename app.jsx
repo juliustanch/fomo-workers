@@ -124,6 +124,9 @@ function Icon({ name, size = 26, color = 'currentColor', stroke = 2 }) {
 function FomoUploadApp({ themeKey = 'terracotta' }) {
   const theme = THEMES[themeKey] || THEMES.terracotta;
   const [project, setProject] = useState('');
+  const [userName, setUserName] = useState(() => {
+    try { return localStorage.getItem('fomo_user_name') || ''; } catch { return ''; }
+  });
   const [category, setCategory] = useState(null);
   const [photos, setPhotos] = useState([]); // [{id, url, name}]
   const [note, setNote] = useState('');
@@ -149,7 +152,14 @@ function FomoUploadApp({ themeKey = 'terracotta' }) {
   });
 
   const skipProject = NO_PROJECT_CATEGORIES.includes(category);
-  const canSubmit = (skipProject || project.trim()) && category && photos.length > 0 && !submitting;
+  const canSubmit = userName.trim() && (skipProject || project.trim()) && category && photos.length > 0 && !submitting;
+
+  // Persist user name on change
+  useEffect(() => {
+    try {
+      if (userName.trim()) localStorage.setItem('fomo_user_name', userName.trim());
+    } catch {}
+  }, [userName]);
 
   function addFiles(fileList) {
     const files = Array.from(fileList || []);
@@ -201,6 +211,57 @@ function FomoUploadApp({ themeKey = 'terracotta' }) {
     }
 
     try {
+      // Build Singapore-time filename prefix: YYYY-MM-DD_HHMM_Uploader
+      const sgFmt = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Singapore',
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', hour12: false,
+      }).formatToParts(new Date());
+      const get = (t) => sgFmt.find(p => p.type === t)?.value || '';
+      const safeName = userName.trim().replace(/[^A-Za-z0-9 _-]/g, '').replace(/\s+/g, '-');
+      const filePrefix = `${get('year')}-${get('month')}-${get('day')}_${get('hour')}${get('minute')}_${safeName}`;
+
+      // If there's a note, send it first as a .txt file
+      const noteText = note.trim();
+      const extraItems = noteText ? 1 : 0;
+      setProgress({ current: 0, total: photos.length + extraItems });
+
+      if (noteText) {
+        const header = [
+          `Project: ${skipProject ? '(none)' : project.trim()}`,
+          `Uploader: ${userName.trim()}`,
+          `Category: ${CATEGORIES.find(c => c.id === category)?.label}`,
+          `Submitted: ${new Date().toLocaleString('en-SG')}`,
+          '',
+          '--- Note ---',
+          noteText,
+        ].join('\n');
+        const noteBlob = new Blob([header], { type: 'text/plain' });
+        const noteB64 = await new Promise(res => {
+          const reader = new FileReader();
+          reader.onload = () => res(reader.result.split(',')[1]);
+          reader.readAsDataURL(noteBlob);
+        });
+        const notePayload = {
+          project: skipProject ? '' : project.trim(),
+          uploader: userName.trim(),
+          category: CATEGORIES.find(c => c.id === category)?.label,
+          timestamp: new Date().toISOString(),
+          note: '',
+          photos: [{ name: `${filePrefix}_NOTE.txt`, data: noteB64 }],
+        };
+        const noteRes = await fetch(FLOW_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(notePayload),
+        });
+        if (!noteRes.ok) {
+          const txt = await noteRes.text().catch(() => '');
+          throw new Error(`Note: HTTP ${noteRes.status} ${txt.slice(0, 200)}`);
+        }
+        setProgress({ current: 1, total: photos.length + extraItems });
+      }
+
       for (let i = 0; i < photos.length; i++) {
         const p = photos[i];
         const originalBlob = await fetch(p.url).then(r => r.blob());
@@ -213,10 +274,11 @@ function FomoUploadApp({ themeKey = 'terracotta' }) {
 
         const payload = {
           project: skipProject ? '' : project.trim(),
+          uploader: userName.trim(),
           category: CATEGORIES.find(c => c.id === category)?.label,
           timestamp: new Date().toISOString(),
           note: i === 0 ? note : '',
-          photos: [{ name: p.name.replace(/\.[^.]+$/, '') + '.jpg', data: b64 }],
+          photos: [{ name: `${filePrefix}_${String(i + 1).padStart(2, '0')}.jpg`, data: b64 }],
         };
 
         const res = await fetch(FLOW_URL, {
@@ -229,7 +291,7 @@ function FomoUploadApp({ themeKey = 'terracotta' }) {
           const txt = await res.text().catch(() => '');
           throw new Error(`Photo ${i + 1}: HTTP ${res.status} ${txt.slice(0, 200)}`);
         }
-        setProgress({ current: i + 1, total: photos.length });
+        setProgress({ current: (noteText ? 1 : 0) + i + 1, total: photos.length + extraItems });
       }
       // Save project to recents on success
       if (!skipProject && project.trim()) {
@@ -332,9 +394,25 @@ function FomoUploadApp({ themeKey = 'terracotta' }) {
         </div>
       </div>
 
+      {/* 0. Name */}
+      <Section theme={theme} step={1} title="What's your name?">
+        <input
+          value={userName}
+          onChange={(e) => setUserName(e.target.value)}
+          placeholder="e.g. Ahmad"
+          style={{
+            width: '100%', boxSizing: 'border-box',
+            background: theme.surface, color: theme.ink,
+            border: `1px solid ${theme.border}`, borderRadius: 14,
+            padding: '14px 16px', fontSize: 16, outline: 'none',
+            fontFamily: 'inherit',
+          }}
+        />
+      </Section>
+
       {/* 1. Project name (hidden for purchase receipts) */}
       {!skipProject && (
-        <Section theme={theme} step={1} title="Which project?">
+        <Section theme={theme} step={2} title="Which project?">
           <ProjectInput
             theme={theme}
             value={project}
@@ -345,7 +423,7 @@ function FomoUploadApp({ themeKey = 'terracotta' }) {
       )}
 
       {/* 2. Category */}
-      <Section theme={theme} step={1} title="What kind of upload?">
+      <Section theme={theme} step={skipProject ? 2 : 3} title="What kind of upload?">
         <div style={{
           display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, padding: '0 18px',
         }}>
@@ -393,7 +471,7 @@ function FomoUploadApp({ themeKey = 'terracotta' }) {
       </Section>
 
       {/* 3. Photos */}
-      <Section theme={theme} step={skipProject ? 2 : 3} title="Photos" subtitle={photos.length > 0 ? `${photos.length} selected` : 'Add as many as you need'}>
+      <Section theme={theme} step={skipProject ? 3 : 4} title="Photos" subtitle={photos.length > 0 ? `${photos.length} selected` : 'Add as many as you need'}>
         <div style={{ padding: '0 18px' }}>
           {photos.length === 0 ? (
             <EmptyPhotoPicker theme={theme} onPick={() => fileRef.current?.click()} onCamera={() => cameraRef.current?.click()} />
@@ -414,7 +492,7 @@ function FomoUploadApp({ themeKey = 'terracotta' }) {
       </Section>
 
       {/* 4. Note (optional) */}
-      <Section theme={theme} step={skipProject ? 3 : 4} title="Note" subtitle="Optional">
+      <Section theme={theme} step={skipProject ? 4 : 5} title="Note" subtitle="Optional">
         <div style={{ padding: '0 18px' }}>
           <textarea
             placeholder="e.g. Replaced the condenser coil, tested at 18°C."
