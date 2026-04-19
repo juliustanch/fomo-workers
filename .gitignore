@@ -1,0 +1,16 @@
+﻿# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Firebase
+.firebase/
+*-debug.log
+
+# Editor
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
