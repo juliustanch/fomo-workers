@@ -2,7 +2,9 @@
 
 A simple, mobile-first photo upload web app for FOMO Energy field workers across Singapore. Workers capture site photos on their phones and upload them to a SharePoint folder, auto-organized by project, category, and uploader.
 
-**Live app:** <https://juliustanch.github.io/fomo-workers/>
+**Live app:** 
+- Firebase: <https://fomo-photo-upload.web.app/>
+- GitHub Pages: <https://juliustanch.github.io/fomo-photo-upload/>
 
 ---
 
@@ -22,10 +24,10 @@ No logins, no app install, no paperwork.
 
 ## Tech stack
 
-Plain HTML + React (via Babel-in-browser, no build step) + vanilla CSS. Hosts statically on GitHub Pages. Server-side logic lives entirely in a **Power Automate flow** that receives the uploads and writes them to SharePoint.
+Plain HTML + React (via Babel-in-browser, no build step) + vanilla CSS. Hosts statically on Firebase and GitHub Pages. Server-side logic lives entirely in a **Power Automate flow** that receives the uploads and writes them to SharePoint.
 
 - **Frontend:** `index.html` + `app.jsx` + `tweaks.jsx` + `ios-frame.jsx` + `fomo-logo.png`
-- **Hosting:** GitHub Pages (free)
+- **Hosting:** Firebase + GitHub Pages
 - **Backend:** Power Automate HTTP trigger → SharePoint "Create file" action
 - **Storage:** SharePoint document library (`Fomo Site Uploads`)
 
