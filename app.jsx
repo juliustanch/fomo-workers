@@ -79,7 +79,7 @@ const THEMES = {
 // ─────────────────────────────────────────────────────────────
 const CATEGORIES = [
   { id: 'before',     label: 'Site survey',   icon: 'eye', hint: 'Before' },
-  { id: 'install',    label: 'Installation',  icon: 'wrench' },
+  { id: 'install',    label: 'Installation/daily updates', uploadLabel: 'Installation', icon: 'wrench' },
   { id: 'after',      label: 'Completion',    icon: 'check', hint: 'After' },
   { id: 'maintain',   label: 'Maintenance',   icon: 'gear' },
   { id: 'receipt',    label: 'Purchase receipt', icon: 'receipt' },
@@ -87,6 +87,12 @@ const CATEGORIES = [
 
 // Categories that don't need a project name
 const NO_PROJECT_CATEGORIES = ['receipt'];
+
+function categoryLabelForUpload(categoryId) {
+  const c = CATEGORIES.find((x) => x.id === categoryId);
+  if (!c) return '';
+  return c.uploadLabel != null ? c.uploadLabel : c.label;
+}
 
 // ─────────────────────────────────────────────────────────────
 // Inline icons — drawn with primitives only (lines, circles, rects)
@@ -233,7 +239,7 @@ function FomoUploadApp({ themeKey = 'terracotta' }) {
         const header = [
           `Project: ${skipProject ? '(none)' : project.trim()}`,
           `Uploader: ${userName.trim()}`,
-          `Category: ${CATEGORIES.find(c => c.id === category)?.label}`,
+          `Category: ${categoryLabelForUpload(category)}`,
           `Submitted: ${new Date().toLocaleString('en-SG')}`,
           '',
           '--- Note ---',
@@ -248,7 +254,7 @@ function FomoUploadApp({ themeKey = 'terracotta' }) {
         const notePayload = {
           project: skipProject ? '' : project.trim(),
           uploader: userName.trim(),
-          category: CATEGORIES.find(c => c.id === category)?.label,
+          category: categoryLabelForUpload(category),
           timestamp: new Date().toISOString(),
           note: '',
           photos: [{ name: `${filePrefix}_NOTE.txt`, data: noteB64 }],
@@ -278,7 +284,7 @@ function FomoUploadApp({ themeKey = 'terracotta' }) {
         const payload = {
           project: skipProject ? '' : project.trim(),
           uploader: userName.trim(),
-          category: CATEGORIES.find(c => c.id === category)?.label,
+          category: categoryLabelForUpload(category),
           timestamp: new Date().toISOString(),
           note: i === 0 ? note : '',
           photos: [{ name: `${filePrefix}_${String(i + 1).padStart(2, '0')}.jpg`, data: b64 }],
