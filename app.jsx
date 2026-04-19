@@ -491,7 +491,7 @@ function FomoUploadApp({ themeKey = 'terracotta' }) {
       <Section theme={theme} step={skipProject ? 4 : 5} title="Note" subtitle="Optional">
         <div style={{ padding: '0 18px' }}>
           <textarea
-            placeholder="e.g. change RCCB, complete installation"
+            placeholder="e.g. change RCCB/MCB, complete installation"
             value={note}
             onChange={(e) => setNote(e.target.value)}
             rows={3}
